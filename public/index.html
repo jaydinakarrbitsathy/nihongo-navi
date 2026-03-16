@@ -2129,11 +2129,7 @@ Keep responses conversational, under 200 words usually. Be a friend, not a textb
 
     if (!resp.ok) {
       const errData = await resp.json().catch(() => ({}));
-      const isStandalone = !insideClaude;
-      if (isStandalone) {
-        throw new Error('standalone_error: ' + (errData?.error?.message || 'HTTP ' + resp.status));
-      }
-      throw new Error(errData?.error?.message || 'HTTP ' + resp.status);
+        throw new Error(errData?.error?.message || 'HTTP ' + resp.status);
     }
 
     const data = await resp.json();
@@ -2536,12 +2532,7 @@ async function sendMessage() {
     }
   } catch (e) {
     removeTyping();
-    const isStandalone = !location.hostname.includes('claude.ai') && !location.hostname.includes('anthropic.com') && location.hostname !== '';
-    if (isStandalone || (e.message && e.message.startsWith('standalone_error'))) {
-      addAIMessage('⚠️ **Connection error!** Running outside Claude.ai?\n\nTo fix:\n1. Run **server.js** → `node server.js`\n2. Set your API key: `$env:ANTHROPIC_API_KEY="sk-ant-..."`\n3. Open **http://localhost:3000** in Chrome', true);
-    } else {
-      addAIMessage('ごめん！(Gomen!) Connection error. Please try again! 🙏', true);
-    }
+    addAIMessage('ごめん！(Gomen!) Connection error. Please try again! 🙏', true);
   }
 
   document.getElementById('send-btn').disabled = false;
