@@ -1,57 +1,29 @@
-const https = require('https');
+export const config = { api: { bodyParser: true } };
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) { res.status(500).json({ error: 'API key not set' }); return; }
 
-  const API_KEY = process.env.ANTHROPIC_API_KEY;
-  if (!API_KEY) {
-    res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in Vercel environment variables.' });
-    return;
-  }
-
-  const body = JSON.stringify(req.body);
-
-  const options = {
-    hostname: 'api.anthropic.com',
-    path: '/v1/messages',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(body),
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-  };
-
-  return new Promise((resolve) => {
-    const apiReq = https.request(options, (apiRes) => {
-      let data = '';
-      apiRes.on('data', (chunk) => { data += chunk; });
-      apiRes.on('end', () => {
-        res.status(apiRes.statusCode).json(JSON.parse(data));
-        resolve();
-      });
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(req.body)
     });
-
-    apiReq.on('error', (err) => {
-      console.error('API request error:', err);
-      res.status(502).json({ error: err.message });
-      resolve();
-    });
-
-    apiReq.write(body);
-    apiReq.end();
-  });
-};
+    const data = await r.json();
+    res.status(r.status).json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
